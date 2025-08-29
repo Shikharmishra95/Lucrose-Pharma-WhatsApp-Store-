@@ -26,11 +26,11 @@ Single-file, mobile-first micro-store for Lucrose Pharma built with Tailwind (CD
 
 ## Getting Started
 1. Clone the repo:
-   git clone https://github.com/your-username/Lucrose-Pharma-WhatsApp-Store.git
+   git clone https://github.com/shikharmishra/Lucrose-Pharma-WhatsApp-Store.git
    cd Lucrose-Pharma-WhatsApp-Store
 2. Open index.html in a browser (double-click or serve with any static server).
 3. Update business details:
-   - WhatsApp number in JS: const WA_NUMBER = "918546095691"
+   - WhatsApp number in JS: const WA_NUMBER = "918546*****"
    - Logo: replace LOGO_URL_HERE in header <img> (or put assets/logo.png and point to it).
    - Products/MRP: edit catalogData in index.html.
 4. Optional: Host on GitHub Pages (Settings → Pages → Deploy from main /root).
