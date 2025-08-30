@@ -2,41 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Lucrose Products – Order via WhatsApp</title>
-  <!-- Tailwind CSS via CDN -->
-  <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet"><!-- Ref: Tailwind via CDN for HTML quick start [10] -->
+  <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    /* Minimal enhancements for drawer & chips */
     .drawer{transition:transform .25s ease}
     .drawer.closed{transform:translateX(100%)}
     .chip{border-radius:9999px;padding:.125rem .5rem}
+    .modal{transition:opacity .2s ease,transform .2s ease}
+    .modal.hidden{opacity:0;pointer-events:none;transform:translateY(10px)}
+    .backdrop{transition:opacity .2s ease}
+    .backdrop.hidden{opacity:0;pointer-events:none}
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
   <!-- Header -->
   <header class="bg-white shadow sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-2">
-        <a href="#" class="flex items-center space-x-2">
-    <!-- यहीं लोगो जोड़ें -->
-    <img
-      src="luc logo.jpeg"
-      alt="Lucrose Pharma"
-      class="h-8 w-auto object-contain sm:h-9"
-    />
-    
-        <span class="text-xl font-bold">Lucrose Product</span>
-        <span class="text-xs text-gray-500">Order on WhatsApp</span>
-      </div>
-      <div class="flex items-center space-x-2">
-        
-  </a>
-        <button id="cartBtn" class="relative px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-          Cart
-          <span id="cartCount" class="ml-2 text-xs bg-white text-green-700 rounded px-2 py-0.5">0</span>
-        </button>
-      </div>
+      <a href="#" class="flex items-center space-x-2">
+        <img src="images/luc logo.jpeg" alt="Lucrose Pharma" class="h-8 w-auto object-contain sm:h-9"/>
+        <div class="flex flex-col leading-tight">
+          <span class="text-xl font-bold">Lucrose Product</span>
+          <span class="text-xs text-gray-500">Order on WhatsApp</span>
+        </div>
+      </a>
+      <button id="cartBtn" class="relative px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+        Cart
+        <span id="cartCount" class="ml-2 text-xs bg-white text-green-700 rounded px-2 py-0.5">0</span>
+      </button>
     </div>
   </header>
 
@@ -97,158 +90,213 @@
     </div>
   </aside>
 
+  <!-- Quick View Modal -->
+  <div id="backdrop" class="fixed inset-0 bg-black bg-opacity-40 backdrop hidden z-40"></div>
+  <div id="quickModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal hidden">
+    <div class="bg-white w-full max-w-2xl rounded-lg shadow-lg overflow-hidden">
+      <div class="flex items-start justify-between px-4 py-3 border-b">
+        <h3 id="qmTitle" class="text-lg font-semibold">Product</h3>
+        <button id="qmClose" class="text-gray-500 hover:text-gray-800 text-2xl leading-none">&times;</button>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4 p-4">
+        <img id="qmImg" src="" alt="Product image" class="w-full h-60 object-contain bg-gray-50 rounded"/>
+        <div class="flex flex-col">
+          <p id="qmDesc" class="text-sm text-gray-700"></p>
+          <div class="mt-2 text-green-700 font-semibold" id="qmPrice">₹0.00</div>
+          <div class="mt-3 flex items-center gap-2">
+            <label class="text-sm text-gray-600">Qty</label>
+            <input id="qmQty" type="number" min="1" value="1" class="w-20 border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-green-500 focus:outline-none">
+          </div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button id="qmAdd" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Add to Cart</button>
+            <button id="qmWA" class="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">WhatsApp</button>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 py-3 bg-gray-50 text-xs text-gray-500 border-t">
+        Free Delivery on orders ≥ ₹1,000
+      </div>
+    </div>
+  </div>
+
   <!-- Floating WhatsApp Button -->
   <a id="waFloat" href="#" class="fixed bottom-5 right-5 bg-green-600 text-white rounded-full shadow-lg px-4 py-3">
     WhatsApp
   </a>
 
   <script>
-    // WhatsApp helpers (click-to-chat formats)
-    const WA_NUMBER = "918546095691"; // India format for 8546095691 (no +, no spaces) [11][8]
+    // WhatsApp helper
+    const WA_NUMBER = "918546095691";
     function buildWaLink(text){
-      const encoded = encodeURIComponent(text).replace(/%0A/g, '%0A'); // ensure newlines preserved
-      // Use wa.me format
-      return `https://wa.me/${WA_NUMBER}?text=${encoded}`; // Click-to-Chat format [8]
-      // Alternative (Meta format):
-      // return `https://api.whatsapp.com/send?phone=${WA_NUMBER}&text=${encoded}`; // Also valid [11]
+      return `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(text)}`;
     }
 
-    // Data model derived from brochure (grouped categories)
-    // Price fields are MRP placeholders for ordering context; adjust as needed.
+    // ----------  IMAGE MAP (folder = images) ----------
+    const images = {
+      "naproluc-d500": "images/lucrose1.jpg",
+      "paraluc-th4":   "images/lucrose10.jpg",
+      "dig-mr":        "images/lucrose18.jpg",
+      "dig-tc":        "images/lucrose9.jpg",
+      "paraluc-dp":    "images/lucrose30.jpg",
+      "paraluc-aq":    "images/lucrose29.jpg",
+
+      "myluc-dmr-tab": "images/lucrose2.jpg",
+      "myluc-dmr-syr": "images/lucrose20.jpg",
+      "myluc-dmr-max": "images/lucrose22.jpg",
+      "hymax":         "images/lucrose5.jpg",
+      "fmrose":        "images/lucrose7.jpg",
+      "hymax-m":       "images/lucrose6.jpg",
+
+      "rabluc-dsr":    "images/lucrose14.jpg",
+      "rabluc-lsr":    "images/lucrose15.jpg",
+      "constiluc":     "images/lucrose13.jpg",
+      "digatac":       "images/lucrose32.jpg",
+      "digatac-s":     "images/lucrose32.jpg",
+
+      "digapod-200":   "images/lucrose11.jpg",
+      "cefi-rose-lb":  "images/lucrose12.jpg",
+      "cefi-rose-o":   "images/lucrose12.jpg",
+      "digaflox-200":  "images/lucrose28.jpg",
+
+      "scabirose-soap":"images/lucrose4.jpg",
+      "scabirose-ap":  "images/lucrose4.jpg",
+      "igrose-it":     "images/lucrose26.jpg",
+      "igrose-cream":  "images/lucrose26.jpg",
+      "igrose-ft":     "images/lucrose27.jpg",
+      "igrose-star":   "images/lucrose27.jpg",
+      "roseacne":      "images/lucrose35.jpg",
+      "fineface-cream":"images/lucrose34.jpg",
+
+      "finerose":      "images/lucrose22.jpg",
+      "finerose-plus": "images/lucrose22.jpg",
+      "finerose-cmc":  "images/lucrose23.jpg",
+
+      "amlorose-at":   "images/lucrose31.jpg",
+      "amlorose-tm":   "images/lucrose24.jpg",
+      "fourad":        "images/lucrose8.jpg",
+      "betarose":      "images/lucrose27.jpg",
+
+      "lucspas-cap":   "images/lucrose18.jpg",
+      "lucspas-susp":  "images/lucrose18.jpg",
+
+      "vomiluc-md4":   "images/lucrose28.jpg",
+      "vomiluc-b6":    "images/lucrose28.jpg",
+      "vomiluc-inj":   "images/lucrose33.jpg",
+
+      "stopgyl-mr":    "images/lucrose21.jpg",
+      "stopgyl-ms":    "images/lucrose21.jpg",
+      "stopgyl-levo":  "images/lucrose21.jpg",
+
+      "paraluc-325":   "images/lucrose25.jpg",
+      "paraluc-mf":    "images/lucrose32.jpg",
+      "paraluc-ib":    "images/lucrose32.jpg",
+
+      "growluc":       "images/lucrose20.jpg",
+      "growluc-jr":    "images/lucrose19.jpg",
+      "eluc-400":      "images/lucrose16.jpg",
+      "moreactive-cap":"images/lucrose31.jpg",
+      "moreactive-pg": "images/lucrose36.jpg",
+      "moreactive-cold":"images/lucrose36.jpg",
+
+      "dentaluc-gel":  "images/lucrose21.jpg",
+      "dentaluc-dt":   "images/lucrose21.jpg",
+
+      "finewell":      "images/lucrose19.jpg",
+
+      "kranti-oil":    "images/lucrose33.jpg",
+      "kranti-shampoo":"images/lucrose33.jpg"
+    };
+
+    // --------------------  CATALOG DATA  --------------------
     const catalogData = [
-      {
-        category: "Pain & Migraine",
-        items: [
-          { id:"naproluc-d500", name:"Naproluc-D500", desc:"Naproxen Sodium 500 mg + Domperidone 10 mg; for acute migraine and pain.", mrp:4.99 },
-          { id:"paraluc-th4", name:"PARALUC-TH4", desc:"Etoricoxib 60 mg + Thiocolchicoside 4 mg; severe pain, muscle spasm.", mrp:11.90 },
-          { id:"dig-mr", name:"DIG-MR", desc:"Aceclofenac 100 mg + Paracetamol 325 mg + Chlorzoxazone 250 mg.", mrp:4.99 },
-          { id:"dig-tc", name:"DIG-TC", desc:"Aceclofenac 100 mg + Paracetamol 325 mg + Trypsin-Chymotrypsin 50,000 AU.", mrp:5.99 },
-          { id:"paraluc-dp", name:"PARALUC-DP", desc:"Paracetamol 325 mg + Diclofenac Potassium 50 mg.", mrp:2.99 },
-          { id:"paraluc-aq", name:"PARALUC-AQ Inj.", desc:"Diclofenac Sodium Injection 75 mg/ml (aqueous).", mrp:15.35 }
-        ]
-      },
-      {
-        category: "Cough & Cold",
-        items: [
-          { id:"myluc-dmr-tab", name:"MYLUC-DMR (Tablet)", desc:"Dextromethorphan HBr + Ambroxol HCl + Levocetirizine + Phenylephrine.", mrp:4.99 },
-          { id:"myluc-dmr-syr", name:"MYLUC-DMR (Syrup)", desc:"DXM + Ambroxol + Levocetirizine + Phenylephrine; adult & junior.", mrp:69.90 },
-          { id:"myluc-dmr-max", name:"MYLUC-DMR MAX", desc:"DXM 10 mg + Guaiphenesin 100 mg + Phenylephrine 5 mg + Cetirizine 2.5 mg.", mrp:45.00 },
-          { id:"hymax", name:"HYMAX (Hydroxyzine)", desc:"Anti‑pruritic/antihistamine; tabs/syrup/drops; 10/25 mg.", mrp:2.99 },
-          { id:"fmrose", name:"FMROSE", desc:"Fexofenadine 120 mg + Montelukast 10 mg; seasonal/perennial rhinitis.", mrp:7.50 },
-          { id:"hymax-m", name:"HYMAX‑M", desc:"Hydroxyzine 25 mg + Montelukast 10 mg.", mrp:6.99 }
-        ]
-      },
-      {
-        category: "Gastro & Acidity",
-        items: [
-          { id:"rabluc-dsr", name:"RABLUC‑DSR", desc:"Rabeprazole 20 mg (GR) + Domperidone 30 mg (SR).", mrp:4.50 },
-          { id:"rabluc-lsr", name:"RABLUC‑LSR", desc:"Rabeprazole 20 mg + Levosulpiride 75 mg (SR).", mrp:6.99 },
-          { id:"constiluc", name:"CONSTILUC", desc:"Liquid paraffin + Milk of magnesia + Sodium picosulfate; laxative.", mrp:85.00 },
-          { id:"digatac", name:"DIGATAC", desc:"Ranitidine syrup 75 mg/5 ml; gas & hyperacidity.", mrp:1.99 },
-          { id:"digatac-s", name:"DIGATAC‑S", desc:"Simethicone 40 mg + Ranitidine 150 mg tablets.", mrp:1.99 }
-        ]
-      },
-      {
-        category: "Antibiotics",
-        items: [
-          { id:"digapod-200", name:"DIGAPOD 200", desc:"Cefpodoxime proxetil 200 mg tablets.", mrp:13.99 },
-          { id:"cefi-rose-lb", name:"CEFIROSE‑LB 200 DT", desc:"Cefixime 200 mg + Lactic acid bacillus; dispersible.", mrp:59.45 },
-          { id:"cefi-rose-o", name:"CEFIROSE‑O", desc:"Cefixime + Ofloxacin tablets/oral suspension.", mrp:59.45 },
-          { id:"digaflox-200", name:"DIGAFLOX‑200", desc:"Ofloxacin 200 mg tablets.", mrp:12.00 }
-        ]
-      },
-      {
-        category: "Dermatology & Antifungals",
-        items: [
-          { id:"scabirose-soap", name:"SCABIROSE Soap", desc:"Monosulfiram 5% medicated soap; scabies/itching.", mrp:69.90 },
-          { id:"scabirose-ap", name:"SCABIROSE‑AP", desc:"Permethrin 5% + Cetrimide + Allantoin + Aloe vera lotion.", mrp:89.90 },
-          { id:"igrose-it", name:"IGROSE‑IT", desc:"Itraconazole 100/200 mg capsules.", mrp:15.90 },
-          { id:"igrose-cream", name:"IGROSE Cream", desc:"Clobetasol + Neomycin + Tolnaftate + Iodochlorhydroxyquinoline + Ketoconazole.", mrp:25.00 },
-          { id:"igrose-ft", name:"IGROSE‑FT Lotion", desc:"Fluticasone 0.05% + Terbinafine 1%.", mrp:89.90 },
-          { id:"igrose-star", name:"IGROSE‑STAR", desc:"Ciprofloxacin + Metronidazole + Terbinafine + Clobetasol cream.", mrp:89.90 },
-          { id:"roseacne", name:"RoseAcne Gel", desc:"Clindamycin 1% + Nicotinamide 4% gel; acne care.", mrp:89.90 },
-          { id:"fineface-cream", name:"FineFace Cream", desc:"Betamethasone + Clindamycin + Nicotinamide; face care.", mrp:89.90 }
-        ]
-      },
-      {
-        category: "Ophthalmic & Otic",
-        items: [
-          { id:"finerose", name:"FINEROSE (Eye/Ear)", desc:"Ofloxacin 0.3% + Dexamethasone 0.1% + HPMC 0.25%.", mrp:35.90 },
-          { id:"finerose-plus", name:"FINEROSE‑PLUS (Ear)", desc:"Neomycin + Beclomethasone + Clotrimazole + Lignocaine.", mrp:45.00 },
-          { id:"finerose-cmc", name:"FINEROSE‑CMC (Eye)", desc:"Moxifloxacin 0.5% + Carboxymethyl cellulose 0.5%.", mrp:69.90 }
-        ]
-      },
-      {
-        category: "Allergy & Asthma",
-        items: [
-          { id:"amlorose-at", name:"AMLOROSE‑AT", desc:"Amlodipine 5 mg + Atenolol 50 mg.", mrp:4.99 },
-          { id:"amlorose-tm", name:"AMLOROSE‑TM", desc:"Telmisartan 40 mg + Amlodipine 5 mg.", mrp:7.50 },
-          { id:"fourad", name:"FourAD (MP)", desc:"Methylprednisolone 4/8 mg dispersible.", mrp:3.99 },
-          { id:"betarose", name:"BETAROSE", desc:"Betamethasone sodium phosphate tablets/drops.", mrp:0.69 }
-        ]
-      },
-      {
-        category: "GI Antispasmodics",
-        items: [
-          { id:"lucspas-cap", name:"LUCSPAS (Caps)", desc:"Simethicone 140 mg + Drotaverine 80 mg; colic & cramps.", mrp:89.90 },
-          { id:"lucspas-susp", name:"LUCSPAS (Susp)", desc:"Drotaverine + Activated Simethicone; pediatric dose.", mrp:69.90 }
-        ]
-      },
-      {
-        category: "Nausea & Vomiting",
-        items: [
-          { id:"vomiluc-md4", name:"VOMILUC‑MD4", desc:"Ondansetron 4 mg ODT; instant relief.", mrp:1.00 },
-          { id:"vomiluc-b6", name:"VOMILUC‑B6", desc:"Doxylamine 10 mg + Pyridoxine 10 mg + Folic acid 2.5 mg.", mrp:3.00 },
-          { id:"vomiluc-inj", name:"VOMILUC Inj.", desc:"Ondansetron 4 mg/2 ml injection.", mrp:20.00 }
-        ]
-      },
-      {
-        category: "Diarrhea & GI Infections",
-        items: [
-          { id:"stopgyl-mr", name:"STOPGYL‑MR", desc:"Ofloxacin + Metronidazole + Racecadotril suspension.", mrp:90.00 },
-          { id:"stopgyl-ms", name:"STOPGYL‑MS", desc:"Ofloxacin + Metronidazole benzoate + Simethicone suspension.", mrp:90.00 },
-          { id:"stopgyl-levo", name:"STOPGYL (Levo+Metro)", desc:"Levofloxacin 125 mg + Metronidazole 250 mg/5 ml suspension.", mrp:110.00 }
-        ]
-      },
-      {
-        category: "Pediatrics – Fever & Pain",
-        items: [
-          { id:"paraluc-325", name:"PARALUC‑325", desc:"Paracetamol 325 mg/5 ml suspension; dose 15 mg/kg.", mrp:60.00 },
-          { id:"paraluc-mf", name:"PARALUC‑MF", desc:"Paracetamol 250 mg + Mefenamic acid 100 mg/5 ml suspension.", mrp:60.00 },
-          { id:"paraluc-ib", name:"PARALUC‑IB", desc:"Paracetamol + Ibuprofen suspension/DT; rapid onset.", mrp:60.00 }
-        ]
-      },
-      {
-        category: "Appetite & Nutrition",
-        items: [
-          { id:"growluc", name:"GROWLUC", desc:"Cyproheptadine + B‑complex + Zinc syrup.", mrp:100.00 },
-          { id:"growluc-jr", name:"GROWLUC‑JR", desc:"Pediatric appetite & vitamins syrup/drops.", mrp:90.00 },
-          { id:"eluc-400", name:"ELUC‑400", desc:"Vitamin E 400 mg softgel.", mrp:3.19 },
-          { id:"moreactive-cap", name:"MoreActive (Caps)", desc:"Ginseng + Multivitamins + Minerals + Antioxidants.", mrp:12.00 },
-          { id:"moreactive-pg", name:"MoreActive‑PG", desc:"Papaya leaf + Giloy + Goat milk + Vitamin E sachet.", mrp:110.00 },
-          { id:"moreactive-cold", name:"MoreActive‑Cold", desc:"Amino acids + Vitamins + Minerals + Lycopene + L‑Carnitine sachet.", mrp:25.00 }
-        ]
-      },
-      {
-        category: "Dental & ENT",
-        items: [
-          { id:"dentaluc-gel", name:"DENTALUC Gel", desc:"Choline salicylate 8.7% + Lignocaine 2% oral gel.", mrp:39.90 },
-          { id:"dentaluc-dt", name:"DENTALUC‑DT", desc:"Ketorolac tromethamine 10 mg dispersible tablets.", mrp:39.90 }
-        ]
-      },
-      {
-        category: "CNS & Mood",
-        items: [
-          { id:"finewell", name:"FineWell", desc:"Flupentixol 0.5 mg + Melitracen 10 mg; day‑time anxiolytic.", mrp:5.99 }
-        ]
-      },
-      {
-        category: "Hair Care",
-        items: [
-          { id:"kranti-oil", name:"Kranti Red Onion Oil", desc:"Red onion + black seed hair oil; strengthening.", mrp:130.00 },
-          { id:"kranti-shampoo", name:"Kranti Shampoo", desc:"Red onion + black seed shampoo; conditioning.", mrp:130.00 }
-        ]
-      }
+      { category: "Pain & Migraine", items: [
+        { id:"naproluc-d500", name:"Naproluc-D500", desc:"Naproxen Sodium 500 mg + Domperidone 10 mg; for acute migraine and pain.", mrp:4.99 },
+        { id:"paraluc-th4", name:"PARALUC-TH4", desc:"Etoricoxib 60 mg + Thiocolchicoside 4 mg; severe pain, muscle spasm.", mrp:11.90 },
+        { id:"dig-mr", name:"DIG-MR", desc:"Aceclofenac 100 mg + Paracetamol 325 mg + Chlorzoxazone 250 mg.", mrp:4.99 },
+        { id:"dig-tc", name:"DIG-TC", desc:"Aceclofenac 100 mg + Paracetamol 325 mg + Trypsin-Chymotrypsin 50,000 AU.", mrp:5.99 },
+        { id:"paraluc-dp", name:"PARALUC-DP", desc:"Paracetamol 325 mg + Diclofenac Potassium 50 mg.", mrp:2.99 },
+        { id:"paraluc-aq", name:"PARALUC-AQ Inj.", desc:"Diclofenac Sodium Injection 75 mg/ml (aqueous).", mrp:15.35 }
+      ]},
+      { category: "Cough & Cold", items: [
+        { id:"myluc-dmr-tab", name:"MYLUC-DMR (Tablet)", desc:"Dextromethorphan HBr + Ambroxol HCl + Levocetirizine + Phenylephrine.", mrp:4.99 },
+        { id:"myluc-dmr-syr", name:"MYLUC-DMR (Syrup)", desc:"DXM + Ambroxol + Levocetirizine + Phenylephrine; adult & junior.", mrp:69.90 },
+        { id:"myluc-dmr-max", name:"MYLUC-DMR MAX", desc:"DXM 10 mg + Guaiphenesin 100 mg + Phenylephrine 5 mg + Cetirizine 2.5 mg.", mrp:45.00 },
+        { id:"hymax", name:"HYMAX (Hydroxyzine)", desc:"Anti‑pruritic/antihistamine; tabs/syrup/drops; 10/25 mg.", mrp:2.99 },
+        { id:"fmrose", name:"FMROSE", desc:"Fexofenadine 120 mg + Montelukast 10 mg; seasonal/perennial rhinitis.", mrp:7.50 },
+        { id:"hymax-m", name:"HYMAX‑M", desc:"Hydroxyzine 25 mg + Montelukast 10 mg.", mrp:6.99 }
+      ]},
+      { category: "Gastro & Acidity", items: [
+        { id:"rabluc-dsr", name:"RABLUC‑DSR", desc:"Rabeprazole 20 mg (GR) + Domperidone 30 mg (SR).", mrp:4.50 },
+        { id:"rabluc-lsr", name:"RABLUC‑LSR", desc:"Rabeprazole 20 mg + Levosulpiride 75 mg (SR).", mrp:6.99 },
+        { id:"constiluc", name:"CONSTILUC", desc:"Liquid paraffin + Milk of magnesia + Sodium picosulfate; laxative.", mrp:85.00 },
+        { id:"digatac", name:"DIGATAC", desc:"Ranitidine syrup 75 mg/5 ml; gas & hyperacidity.", mrp:1.99 },
+        { id:"digatac-s", name:"DIGATAC‑S", desc:"Simethicone 40 mg + Ranitidine 150 mg tablets.", mrp:1.99 }
+      ]},
+      { category: "Antibiotics", items: [
+        { id:"digapod-200", name:"DIGAPOD 200", desc:"Cefpodoxime proxetil 200 mg tablets.", mrp:13.99 },
+        { id:"cefi-rose-lb", name:"CEFIROSE‑LB 200 DT", desc:"Cefixime 200 mg + Lactic acid bacillus; dispersible.", mrp:59.45 },
+        { id:"cefi-rose-o", name:"CEFIROSE‑O", desc:"Cefixime + Ofloxacin tablets/oral suspension.", mrp:59.45 },
+        { id:"digaflox-200", name:"DIGAFLOX‑200", desc:"Ofloxacin 200 mg tablets.", mrp:12.00 }
+      ]},
+      { category: "Dermatology & Antifungals", items: [
+        { id:"scabirose-soap", name:"SCABIROSE Soap", desc:"Monosulfiram 5% medicated soap; scabies/itching.", mrp:69.90 },
+        { id:"scabirose-ap", name:"SCABIROSE‑AP", desc:"Permethrin 5% + Cetrimide + Allantoin + Aloe vera lotion.", mrp:89.90 },
+        { id:"igrose-it", name:"IGROSE‑IT", desc:"Itraconazole 100/200 mg capsules.", mrp:15.90 },
+        { id:"igrose-cream", name:"IGROSE Cream", desc:"Clobetasol + Neomycin + Tolnaftate + Iodochlorhydroxyquinoline + Ketoconazole.", mrp:25.00 },
+        { id:"igrose-ft", name:"IGROSE‑FT Lotion", desc:"Fluticasone 0.05% + Terbinafine 1%.", mrp:89.90 },
+        { id:"igrose-star", name:"IGROSE‑STAR", desc:"Ciprofloxacin + Metronidazole + Terbinafine + Clobetasol cream.", mrp:89.90 },
+        { id:"roseacne", name:"RoseAcne Gel", desc:"Clindamycin 1% + Nicotinamide 4% gel; acne care.", mrp:89.90 },
+        { id:"fineface-cream", name:"FineFace Cream", desc:"Betamethasone + Clindamycin + Nicotinamide; face care.", mrp:89.90 }
+      ]},
+      { category: "Ophthalmic & Otic", items: [
+        { id:"finerose", name:"FINEROSE (Eye/Ear)", desc:"Ofloxacin 0.3% + Dexamethasone 0.1% + HPMC 0.25%.", mrp:35.90 },
+        { id:"finerose-plus", name:"FINEROSE‑PLUS (Ear)", desc:"Neomycin + Beclomethasone + Clotrimazole + Lignocaine.", mrp:45.00 },
+        { id:"finerose-cmc", name:"FINEROSE‑CMC (Eye)", desc:"Moxifloxacin 0.5% + Carboxymethyl cellulose 0.5%.", mrp:69.90 }
+      ]},
+      { category: "Allergy & Asthma", items: [
+        { id:"amlorose-at", name:"AMLOROSE‑AT", desc:"Amlodipine 5 mg + Atenolol 50 mg.", mrp:4.99 },
+        { id:"amlorose-tm", name:"AMLOROSE‑TM", desc:"Telmisartan 40 mg + Amlodipine 5 mg.", mrp:7.50 },
+        { id:"fourad", name:"FourAD (MP)", desc:"Methylprednisolone 4/8 mg dispersible.", mrp:3.99 },
+        { id:"betarose", name:"BETAROSE", desc:"Betamethasone sodium phosphate tablets/drops.", mrp:0.69 }
+      ]},
+      { category: "GI Antispasmodics", items: [
+        { id:"lucspas-cap", name:"LUCSPAS (Caps)", desc:"Simethicone 140 mg + Drotaverine 80 mg; colic & cramps.", mrp:89.90 },
+        { id:"lucspas-susp", name:"LUCSPAS (Susp)", desc:"Drotaverine + Activated Simethicone; pediatric dose.", mrp:69.90 }
+      ]},
+      { category: "Nausea & Vomiting", items: [
+        { id:"vomiluc-md4", name:"VOMILUC‑MD4", desc:"Ondansetron 4 mg ODT; instant relief.", mrp:1.00 },
+        { id:"vomiluc-b6", name:"VOMILUC‑B6", desc:"Doxylamine 10 mg + Pyridoxine 10 mg + Folic acid 2.5 mg.", mrp:3.00 },
+        { id:"vomiluc-inj", name:"VOMILUC Inj.", desc:"Ondansetron 4 mg/2 ml injection.", mrp:20.00 }
+      ]},
+      { category: "Diarrhea & GI Infections", items: [
+        { id:"stopgyl-mr", name:"STOPGYL‑MR", desc:"Ofloxacin + Metronidazole + Racecadotril suspension.", mrp:90.00 },
+        { id:"stopgyl-ms", name:"STOPGYL‑MS", desc:"Ofloxacin + Metronidazole benzoate + Simethicone suspension.", mrp:90.00 },
+        { id:"stopgyl-levo", name:"STOPGYL (Levo+Metro)", desc:"Levofloxacin 125 mg + Metronidazole 250 mg/5 ml suspension.", mrp:110.00 }
+      ]},
+      { category: "Pediatrics – Fever & Pain", items: [
+        { id:"paraluc-325", name:"PARALUC‑325", desc:"Paracetamol 325 mg/5 ml suspension; dose 15 mg/kg.", mrp:60.00 },
+        { id:"paraluc-mf", name:"PARALUC‑MF", desc:"Paracetamol 250 mg + Mefenamic acid 100 mg/5 ml suspension.", mrp:60.00 },
+        { id:"paraluc-ib", name:"PARALUC‑IB", desc:"Paracetamol + Ibuprofen suspension/DT; rapid onset.", mrp:60.00 }
+      ]},
+      { category: "Appetite & Nutrition", items: [
+        { id:"growluc", name:"GROWLUC", desc:"Cyproheptadine + B‑complex + Zinc syrup.", mrp:100.00 },
+        { id:"growluc-jr", name:"GROWLUC‑JR", desc:"Pediatric appetite & vitamins syrup/drops.", mrp:90.00 },
+        { id:"eluc-400", name:"ELUC‑400", desc:"Vitamin E 400 mg softgel.", mrp:3.19 },
+        { id:"moreactive-cap", name:"MoreActive (Caps)", desc:"Ginseng + Multivitamins + Minerals + Antioxidants.", mrp:12.00 },
+        { id:"moreactive-pg", name:"MoreActive‑PG", desc:"Papaya leaf + Giloy + Goat milk + Vitamin E sachet.", mrp:110.00 },
+        { id:"moreactive-cold", name:"MoreActive‑Cold", desc:"Amino acids + Vitamins + Minerals + Lycopene + L‑Carnitine sachet.", mrp:25.00 }
+      ]},
+      { category: "Dental & ENT", items: [
+        { id:"dentaluc-gel", name:"DENTALUC Gel", desc:"Choline salicylate 8.7% + Lignocaine 2% oral gel.", mrp:39.90 },
+        { id:"dentaluc-dt", name:"DENTALUC‑DT", desc:"Ketorolac tromethamine 10 mg dispersible tablets.", mrp:39.90 }
+      ]},
+      { category: "CNS & Mood", items: [
+        { id:"finewell", name:"FineWell", desc:"Flupentixol 0.5 mg + Melitracen 10 mg; day‑time anxiolytic.", mrp:5.99 }
+      ]},
+      { category: "Hair Care", items: [
+        { id:"kranti-oil", name:"Kranti Red Onion Oil", desc:"Red onion + black seed hair oil; strengthening.", mrp:130.00 },
+        { id:"kranti-shampoo", name:"Kranti Shampoo", desc:"Red onion + black seed shampoo; conditioning.", mrp:130.00 }
+      ]}
     ];
 
     // Populate category filter
@@ -269,59 +317,49 @@
 
       catalogData.forEach(section => {
         if (cat !== 'all' && section.category !== cat) return;
-
-        // Filter items by search
         const filtered = section.items.filter(it =>
-          it.name.toLowerCase().includes(q) ||
-          it.desc.toLowerCase().includes(q)
+          it.name.toLowerCase().includes(q) || it.desc.toLowerCase().includes(q)
         );
         if (!filtered.length) return;
 
         const sec = document.createElement('section');
-        sec.innerHTML = `
-          <h2 class="text-xl font-semibold mb-3">${section.category}</h2>
-          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-        `;
+        sec.innerHTML = `<h2 class="text-xl font-semibold mb-3">${section.category}</h2><div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>`;
         const grid = sec.querySelector('div');
 
         filtered.forEach(it => {
+          const imgSrc = images[it.id] || '';
           const card = document.createElement('div');
-          card.className = "bg-white border rounded-lg p-4 flex flex-col";
+          card.className = "bg-white border rounded-lg overflow-hidden flex flex-col hover:shadow-md transition";
           card.innerHTML = `
-            <div class="flex-1">
+            <img src="${imgSrc}" alt="${it.name}" loading="lazy" class="w-full h-40 object-contain bg-gray-50" />
+            <div class="p-4 flex-1 flex flex-col">
               <div class="flex items-start justify-between">
                 <h3 class="font-semibold text-lg pr-2">${it.name}</h3>
                 <span class="chip bg-green-100 text-green-700 text-xs">₹${it.mrp.toFixed(2)}</span>
               </div>
-              <p class="text-sm text-gray-700 mt-2">${it.desc}</p>
-            </div>
-            <div class="mt-4 flex items-center space-x-2">
-              <input type="number" min="1" value="1" class="w-20 border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-green-500 focus:outline-none">
-              <button data-id="${it.id}" class="addBtn px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700">Add to Cart</button>
-              <button data-id="${it.id}" class="waBtn px-3 py-2 bg-gray-100 text-green-700 rounded hover:bg-gray-200">WhatsApp</button>
+              <p class="text-sm text-gray-700 mt-2 flex-1">${it.desc}</p>
+              <div class="mt-4 flex items-center space-x-2">
+                <input type="number" min="1" value="1" class="w-20 border border-gray-300 rounded px-2 py-1 qtyInput">
+                <button data-id="${it.id}" class="addBtn px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700">Add</button>
+                <button data-id="${it.id}" class="quickBtn px-3 py-2 bg-gray-100 text-green-700 rounded hover:bg-gray-200">Quick View</button>
+              </div>
             </div>
           `;
           grid.appendChild(card);
         });
-
         catalogEl.appendChild(sec);
       });
 
-      // Wire buttons
+      // Bind events
       document.querySelectorAll('.addBtn').forEach(btn => {
         btn.addEventListener('click', e => {
-          const id = e.currentTarget.getAttribute('data-id');
-          const qty = parseInt(e.currentTarget.parentElement.querySelector('input').value || '1', 10);
+          const id = e.target.dataset.id;
+          const qty = parseInt(e.target.parentElement.querySelector('.qtyInput').value || '1', 10);
           addToCart(id, qty);
         });
       });
-      document.querySelectorAll('.waBtn').forEach(btn => {
-        btn.addEventListener('click', e => {
-          const id = e.currentTarget.getAttribute('data-id');
-          const item = findItem(id);
-          const msg = `Hello, I'd like to inquire about: ${item.name} – ${item.desc} (MRP ₹${item.mrp.toFixed(2)}).`;
-          window.open(buildWaLink(msg), '_blank'); // Click-to-Chat open [8][11]
-        });
+      document.querySelectorAll('.quickBtn').forEach(btn => {
+        btn.addEventListener('click', e => openQuick(e.target.dataset.id));
       });
     }
 
@@ -330,17 +368,15 @@
         const f = c.items.find(x => x.id === id);
         if (f) return f;
       }
-      return null;
     }
 
-    // Cart state
-    const cart = new Map(); // id -> {item, qty}
+    // Cart
+    const cart = new Map();
     function addToCart(id, qty){
       const it = findItem(id);
       if (!it) return;
-      const existing = cart.get(id);
-      if (existing) existing.qty += qty;
-      else cart.set(id, { item: it, qty });
+      const row = cart.get(id);
+      if (row) row.qty += qty; else cart.set(id, { item: it, qty });
       updateCartUI();
     }
     function setQty(id, qty){
@@ -353,37 +389,30 @@
       cart.delete(id);
       updateCartUI();
     }
-
-    // Totals (basic demo: shipping/tax flat or 0)
     function calcTotals(){
       let subtotal = 0;
       cart.forEach(({item, qty}) => subtotal += item.mrp * qty);
-      const shipping = subtotal > 999 ? 0 : 49; // example rule
-      const tax = 0; // placeholder
+      const shipping = subtotal > 999 ? 0 : (subtotal > 0 ? 49 : 0);
+      const tax = 0;
       const total = subtotal + shipping + tax;
-      return { subtotal, shipping, tax, total };
+      return {subtotal, shipping, tax, total};
     }
 
-    // Cart UI
     const cartList = document.getElementById('cartList');
     function updateCartUI(){
-      // Count
       let count = 0;
       cart.forEach(v => count += v.qty);
       document.getElementById('cartCount').textContent = String(count);
-
-      // List
       cartList.innerHTML = '';
       cart.forEach(({item, qty}) => {
         const li = document.createElement('li');
         li.className = "py-3 flex items-center justify-between";
         li.innerHTML = `
-          <div class="pr-2">
+          <div>
             <div class="font-medium">${item.name}</div>
             <div class="text-sm text-gray-600">₹${item.mrp.toFixed(2)} x ${qty} = ₹${(item.mrp*qty).toFixed(2)}</div>
             <div class="mt-2 flex items-center space-x-2">
-              <label class="text-xs text-gray-500">Qty</label>
-              <input type="number" min="1" value="${qty}" class="w-20 border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-green-500 focus:outline-none qtyInput" data-id="${item.id}">
+              <input type="number" min="1" value="${qty}" class="w-20 border border-gray-300 rounded px-2 py-1 qtyInput" data-id="${item.id}">
               <button class="text-red-600 text-sm removeBtn" data-id="${item.id}">Remove</button>
             </div>
           </div>
@@ -392,18 +421,12 @@
       });
 
       document.querySelectorAll('.qtyInput').forEach(inp => {
-        inp.addEventListener('change', e => {
-          const id = e.currentTarget.getAttribute('data-id');
-          setQty(id, parseInt(e.currentTarget.value || '1', 10));
-        });
+        inp.addEventListener('change', e => setQty(e.target.dataset.id, parseInt(e.target.value || '1', 10)));
       });
       document.querySelectorAll('.removeBtn').forEach(btn => {
-        btn.addEventListener('click', e => {
-          removeItem(e.currentTarget.getAttribute('data-id'));
-        });
+        btn.addEventListener('click', e => removeItem(e.target.dataset.id));
       });
 
-      // Totals
       const {subtotal, shipping, tax, total} = calcTotals();
       document.getElementById('subtotal').textContent = `₹${subtotal.toFixed(2)}`;
       document.getElementById('shipping').textContent = `₹${shipping.toFixed(2)}`;
@@ -411,64 +434,84 @@
       document.getElementById('total').textContent = `₹${total.toFixed(2)}`;
     }
 
-    // Drawer controls
+    // Drawer
     const drawer = document.getElementById('cartDrawer');
     document.getElementById('cartBtn').addEventListener('click', () => drawer.classList.remove('closed'));
     document.getElementById('closeCart').addEventListener('click', () => drawer.classList.add('closed'));
 
-    // Order flow: build WhatsApp message
+    // Quick Modal
+    const backdrop = document.getElementById('backdrop');
+    const modal = document.getElementById('quickModal');
+    const qmTitle = document.getElementById('qmTitle');
+    const qmImg = document.getElementById('qmImg');
+    const qmDesc = document.getElementById('qmDesc');
+    const qmPrice = document.getElementById('qmPrice');
+    const qmQty = document.getElementById('qmQty');
+    let currentQuickId = null;
+
+    function openQuick(id){
+      const item = findItem(id);
+      if(!item) return;
+      currentQuickId = id;
+      qmTitle.textContent = item.name;
+      qmImg.src = images[id] || '';
+      qmDesc.textContent = item.desc;
+      qmPrice.textContent = `₹${item.mrp.toFixed(2)}`;
+      qmQty.value = 1;
+      backdrop.classList.remove('hidden');
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeQuick(){
+      backdrop.classList.add('hidden');
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    document.getElementById('qmClose').addEventListener('click', closeQuick);
+    backdrop.addEventListener('click', closeQuick);
+    document.getElementById('qmAdd').addEventListener('click', () => {
+      const qty = Math.max(1, parseInt(qmQty.value || '1', 10));
+      addToCart(currentQuickId, qty);
+      closeQuick();
+    });
+    document.getElementById('qmWA').addEventListener('click', () => {
+      const item = findItem(currentQuickId);
+      const qty = Math.max(1, parseInt(qmQty.value || '1', 10));
+      const msg = `Hi, I'm interested in:\n${item.name}\n${item.desc}\nMRP: ₹${item.mrp.toFixed(2)}\nQty: ${qty}`;
+      window.open(buildWaLink(msg), '_blank');
+      closeQuick();
+    });
+
+    // Order via WhatsApp
     document.getElementById('orderBtn').addEventListener('click', () => {
-      if (cart.size === 0) {
-        alert('Cart is empty.');
-        return;
-      }
+      if(cart.size === 0){ alert('Cart is empty'); return; }
       const name = document.getElementById('custName').value.trim();
       const addr = document.getElementById('custAddress').value.trim();
       const paym = document.getElementById('paymentMode').value;
       const notes = document.getElementById('custNotes').value.trim();
+      if(!name || !addr){ alert('Please enter name and address'); return; }
 
-      if (!name || !addr){
-        alert('Please enter name and address.');
-        return;
-      }
-
-      const lines = [];
-      lines.push('New Order via Website');
-      lines.push('----------------------');
-      lines.push(`Customer: ${name}`);
-      lines.push(`Address: ${addr}`);
-      lines.push(`Payment: ${paym}`);
-      if (notes) lines.push(`Notes: ${notes}`);
-      lines.push('');
-      lines.push('Items:');
+      let msg = `New Order via Website\n----------------------\nCustomer: ${name}\nAddress: ${addr}\nPayment: ${paym}`;
+      if(notes) msg += `\nNotes: ${notes}`;
+      msg += '\n\nItems:\n';
       cart.forEach(({item, qty}) => {
-        lines.push(`• ${item.name} | Qty: ${qty} | MRP: ₹${item.mrp.toFixed(2)} | Line: ₹${(item.mrp*qty).toFixed(2)}`);
+        msg += `• ${item.name} | Qty: ${qty} | MRP: ₹${item.mrp.toFixed(2)} | Line: ₹${(item.mrp*qty).toFixed(2)}\n`;
       });
-      const totals = calcTotals();
-      lines.push('');
-      lines.push(`Subtotal: ₹${totals.subtotal.toFixed(2)}`);
-      lines.push(`Shipping: ₹${totals.shipping.toFixed(2)}`);
-      lines.push(`Tax: ₹${totals.tax.toFixed(2)}`);
-      lines.push(`Total: ₹${totals.total.toFixed(2)}`);
-      lines.push('');
-      lines.push('Please confirm availability and share payment/dispatch details.');
-
-      const msg = lines.join('\n');
-      const url = buildWaLink(msg); // Properly URL-encoded click-to-chat link [8][11]
-      window.open(url, '_blank');
+      const {subtotal, shipping, tax, total} = calcTotals();
+      msg += `\nSubtotal: ₹${subtotal.toFixed(2)}\nShipping: ₹${shipping.toFixed(2)}\nTax: ₹${tax.toFixed(2)}\nTotal: ₹${total.toFixed(2)}`;
+      window.open(buildWaLink(msg), '_blank');
     });
 
-    // Floating WA button -> opens a blank chat
-    document.getElementById('waFloat').addEventListener('click', (e) => {
-      e.preventDefault();
-      window.open(buildWaLink('Hello! I would like to know more about the products.'), '_blank'); // Simple starter [8]
+    // Floating WhatsApp
+    document.getElementById('waFloat').addEventListener('click', () => {
+      window.open(buildWaLink('Hello! I would like to know more about the products.'), '_blank');
     });
 
     // Filters
     document.getElementById('searchInput').addEventListener('input', renderCatalog);
-    catSelect.addEventListener('change', renderCatalog);
+    document.getElementById('categoryFilter').addEventListener('change', renderCatalog);
 
-    // Initial render
+    // Init
     renderCatalog();
     updateCartUI();
   </script>
